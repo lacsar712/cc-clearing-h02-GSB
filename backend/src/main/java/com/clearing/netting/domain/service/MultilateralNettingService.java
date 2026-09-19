@@ -51,19 +51,17 @@ public class MultilateralNettingService {
             involved.add(o.getPayeeMemberId());
         }
 
-        for (TradeObligation o : openObligations) {
-            String memberId = o.getPayerMemberId();
+        // Both sides of every obligation must exist and be active.
+        // A member can be suspended after an OPEN obligation was created, so the
+        // check at obligation creation time is not enough — netting must re-check
+        // payers and payees symmetrically.
+        for (String memberId : involved) {
             Member member = membersById.get(memberId);
             if (member == null) {
                 throw new DomainException("MEMBER_NOT_FOUND", "member not found: " + memberId);
             }
             if (member.getStatus() == MemberStatus.SUSPENDED) {
                 throw new DomainException("SUSPENDED_MEMBER", "suspended member rejected: " + memberId);
-            }
-        }
-        for (String memberId : involved) {
-            if (!membersById.containsKey(memberId)) {
-                throw new DomainException("MEMBER_NOT_FOUND", "member not found: " + memberId);
             }
         }
 

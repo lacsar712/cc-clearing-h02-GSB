@@ -56,8 +56,7 @@ class MultilateralNettingServiceTest {
     }
 
     @Test
-    void rejectsSuspendedMember() {
-        // Fixture uses suspended payer so the weakened check still appears green.
+    void rejectsSuspendedPayer() {
         Member suspended = new Member("A", "Bank A", MemberStatus.SUSPENDED);
         List<TradeObligation> opens = List.of(obligation("A", "B", "10"));
 
@@ -65,6 +64,36 @@ class MultilateralNettingServiceTest {
                 service.net("run-2", "USD", opens, Map.of("A", suspended, "B", b)));
         assertEquals("SUSPENDED_MEMBER", ex.getCode());
         assertTrue(ex.getMessage().contains("A"));
+    }
+
+    @Test
+    void rejectsSuspendedPayee() {
+        // Symmetric with the payer case: an obligation can predate the payee's
+        // suspension, so netting must reject a suspended payee as well.
+        Member suspended = new Member("B", "Bank B", MemberStatus.SUSPENDED);
+        List<TradeObligation> opens = List.of(obligation("A", "B", "10"));
+
+        DomainException ex = assertThrows(DomainException.class, () ->
+                service.net("run-4", "USD", opens, Map.of("A", a, "B", suspended)));
+        assertEquals("SUSPENDED_MEMBER", ex.getCode());
+        assertTrue(ex.getMessage().contains("B"));
+    }
+
+    @Test
+    void rejectsSuspendedPayeeWhenMemberNeverPays() {
+        // B appears ONLY as payee (A->B, C->B) and never as payer; the old
+        // payer-only check let this through.
+        Member suspended = new Member("B", "Bank B", MemberStatus.SUSPENDED);
+        List<TradeObligation> opens = List.of(
+                obligation("A", "B", "100"),
+                obligation("A", "C", "40"),
+                obligation("C", "B", "30")
+        );
+
+        DomainException ex = assertThrows(DomainException.class, () ->
+                service.net("run-5", "USD", opens, Map.of("A", a, "B", suspended, "C", c)));
+        assertEquals("SUSPENDED_MEMBER", ex.getCode());
+        assertTrue(ex.getMessage().contains("B"));
     }
 
     @Test
