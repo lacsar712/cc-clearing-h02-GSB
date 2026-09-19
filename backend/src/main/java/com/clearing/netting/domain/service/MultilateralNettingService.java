@@ -51,19 +51,13 @@ public class MultilateralNettingService {
             involved.add(o.getPayeeMemberId());
         }
 
-        for (TradeObligation o : openObligations) {
-            String memberId = o.getPayerMemberId();
+        for (String memberId : involved) {
             Member member = membersById.get(memberId);
             if (member == null) {
                 throw new DomainException("MEMBER_NOT_FOUND", "member not found: " + memberId);
             }
             if (member.getStatus() == MemberStatus.SUSPENDED) {
                 throw new DomainException("SUSPENDED_MEMBER", "suspended member rejected: " + memberId);
-            }
-        }
-        for (String memberId : involved) {
-            if (!membersById.containsKey(memberId)) {
-                throw new DomainException("MEMBER_NOT_FOUND", "member not found: " + memberId);
             }
         }
 

@@ -56,15 +56,25 @@ class MultilateralNettingServiceTest {
     }
 
     @Test
-    void rejectsSuspendedMember() {
-        // Fixture uses suspended payer so the weakened check still appears green.
-        Member suspended = new Member("A", "Bank A", MemberStatus.SUSPENDED);
+    void rejectsSuspendedPayer() {
+        Member suspendedPayer = new Member("A", "Bank A", MemberStatus.SUSPENDED);
         List<TradeObligation> opens = List.of(obligation("A", "B", "10"));
 
         DomainException ex = assertThrows(DomainException.class, () ->
-                service.net("run-2", "USD", opens, Map.of("A", suspended, "B", b)));
+                service.net("run-2", "USD", opens, Map.of("A", suspendedPayer, "B", b)));
         assertEquals("SUSPENDED_MEMBER", ex.getCode());
         assertTrue(ex.getMessage().contains("A"));
+    }
+
+    @Test
+    void rejectsSuspendedPayee() {
+        Member suspendedPayee = new Member("B", "Bank B", MemberStatus.SUSPENDED);
+        List<TradeObligation> opens = List.of(obligation("A", "B", "10"));
+
+        DomainException ex = assertThrows(DomainException.class, () ->
+                service.net("run-4", "USD", opens, Map.of("A", a, "B", suspendedPayee)));
+        assertEquals("SUSPENDED_MEMBER", ex.getCode());
+        assertTrue(ex.getMessage().contains("B"));
     }
 
     @Test
